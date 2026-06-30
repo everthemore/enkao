@@ -12,7 +12,9 @@ export interface ActionTemplate {
 
 export interface AppEvent {
   id: string;
-  date: string; // YYYY-MM-DD
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  date?: string; // DEPRECATED: for backwards compatibility
   description: string;
   layers: EducationLayer[];
 }

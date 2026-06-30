@@ -9,6 +9,7 @@ import type { EducationLayer } from '../types';
 
 export default function DashboardView() {
   const getCalculatedActions = useStore(state => state.getCalculatedActions);
+  const allEvents = useStore(state => state.events);
   
   const allActions = getCalculatedActions();
 
@@ -47,7 +48,7 @@ export default function DashboardView() {
       }
 
       if (timeframe === 'Aangepaste Periode') {
-        if (!customStartDate && !customEndDate) return true; // Show all if nothing entered yet
+        if (!customStartDate && !customEndDate) return true;
         
         let inRange = true;
         if (customStartDate) {
@@ -64,6 +65,67 @@ export default function DashboardView() {
       return true;
     });
   }, [allActions, timeframe, layerFilter, itemFilter, customStartDate, customEndDate]);
+
+  // Derived filtered events
+  const filteredEvents = useMemo(() => {
+    return allEvents.filter(event => {
+      // 1. Layer Filter for Events
+      if (layerFilter !== 'Alle') {
+        // If event specifies layers, it must include the filtered layer.
+        // If it specifies no layers (or all), it applies to all.
+        if (event.layers && event.layers.length > 0 && !event.layers.includes(layerFilter)) {
+          return false;
+        }
+      }
+      
+      // Note: itemFilter does not apply to events, so we skip it.
+
+      // 2. Timeframe Filter
+      if (timeframe === 'Alles') return true;
+      
+      const eStart = event.startDate || event.date;
+      const eEnd = event.endDate || event.date;
+      
+      if (!eStart || !eEnd) return false;
+
+      const eventStart = parseISO(eStart);
+      const eventEnd = endOfDay(parseISO(eEnd));
+      const today = startOfDay(new Date());
+      
+      if (timeframe === 'Vandaag') {
+        return isWithinInterval(today, { start: eventStart, end: eventEnd });
+      }
+      
+      if (timeframe === '10 Dagen') {
+        const periodEnd = endOfDay(addDays(today, 10));
+        return (isBefore(eventStart, periodEnd) || eventStart.getTime() === periodEnd.getTime()) && 
+               (isAfter(eventEnd, today) || eventEnd.getTime() === today.getTime());
+      }
+
+      if (timeframe === 'Maand') {
+        const periodEnd = endOfDay(addDays(today, 30));
+        return (isBefore(eventStart, periodEnd) || eventStart.getTime() === periodEnd.getTime()) && 
+               (isAfter(eventEnd, today) || eventEnd.getTime() === today.getTime());
+      }
+
+      if (timeframe === 'Aangepaste Periode') {
+        if (!customStartDate && !customEndDate) return true;
+        
+        let inRange = true;
+        if (customStartDate) {
+          const start = startOfDay(parseISO(customStartDate));
+          if (isBefore(eventEnd, start)) inRange = false; // Event ends before custom start
+        }
+        if (customEndDate) {
+          const end = endOfDay(parseISO(customEndDate));
+          if (isAfter(eventStart, end)) inRange = false; // Event starts after custom end
+        }
+        return inRange;
+      }
+
+      return true;
+    });
+  }, [allEvents, timeframe, layerFilter, customStartDate, customEndDate]);
 
   const totalCost = filteredActions.reduce((acc, curr) => acc + curr.cost, 0);
   const totalDays = filteredActions.reduce((acc, curr) => acc + curr.durationDays, 0);
@@ -109,7 +171,7 @@ export default function DashboardView() {
       <div className="flex gap-6 mt-2">
         {/* Left column: Timeline */}
         <div style={{ flex: 1 }}>
-          <TimelineView actions={filteredActions} />
+          <TimelineView actions={filteredActions} events={filteredEvents} />
         </div>
         
         {/* Right column: Chart */}

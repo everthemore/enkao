@@ -29,7 +29,11 @@ export const calculateValidDate = (
     
     // Check if there is an event on this day that applies to the target layer
     const hasEvent = events.some(e => {
-      if (e.date !== dateStr) return false;
+      const eStart = e.startDate || e.date;
+      const eEnd = e.endDate || e.date;
+      
+      if (!eStart || !eEnd || dateStr < eStart || dateStr > eEnd) return false;
+      
       // If layers array is empty, we assume it applies to all. Otherwise check includes.
       if (!e.layers || e.layers.length === 0) return true;
       return e.layers.includes(targetLayer);
