@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, CalendarPlus, CalendarDays, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, CalendarPlus, CalendarDays, Settings, Moon, Sun } from 'lucide-react';
 import DashboardView from './views/DashboardView';
 import PlanningView from './views/PlanningView';
 import EventsView from './views/EventsView';
+import TemplatesView from './views/TemplatesView';
 
-type Tab = 'dashboard' | 'planning' | 'events';
+type Tab = 'dashboard' | 'planning' | 'events' | 'templates';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -55,6 +56,15 @@ function App() {
           Evenementen
         </button>
 
+        <button 
+          className={`btn ${activeTab === 'templates' ? 'btn-primary' : ''}`}
+          style={{ justifyContent: 'flex-start' }}
+          onClick={() => setActiveTab('templates')}
+        >
+          <Settings size={18} />
+          Sjablonen Beheer
+        </button>
+
         <div style={{ marginTop: 'auto' }}>
           <button 
             className="btn"
@@ -75,6 +85,7 @@ function App() {
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'planning' && <PlanningView />}
           {activeTab === 'events' && <EventsView />}
+          {activeTab === 'templates' && <TemplatesView />}
         </div>
       </main>
     </div>
