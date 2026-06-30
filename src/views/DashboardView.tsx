@@ -1,34 +1,81 @@
+import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { format, parseISO } from 'date-fns';
+import DashboardFilters from '../components/DashboardFilters';
+import type { TimeframeFilter } from '../components/DashboardFilters';
+import TimelineView from '../components/TimelineView';
+import WorkloadChart from '../components/WorkloadChart';
+import { isToday, isWithinInterval, addDays, parseISO } from 'date-fns';
+import type { EducationLayer } from '../types';
 
 export default function DashboardView() {
   const getCalculatedActions = useStore(state => state.getCalculatedActions);
-  const plannedItems = useStore(state => state.plannedItems);
   
-  const calculatedActions = getCalculatedActions();
+  const allActions = getCalculatedActions();
 
-  const totalCost = calculatedActions.reduce((acc, curr) => acc + curr.cost, 0);
-  const totalDays = calculatedActions.reduce((acc, curr) => acc + curr.durationDays, 0);
+  // Local filter state
+  const [timeframe, setTimeframe] = useState<TimeframeFilter>('Alles');
+  const [layerFilter, setLayerFilter] = useState<EducationLayer | 'Alle'>('Alle');
+  const [itemFilter, setItemFilter] = useState<string>('Alle');
+
+  // Derived filtered actions
+  const filteredActions = useMemo(() => {
+    return allActions.filter(action => {
+      // 1. Layer Filter
+      if (layerFilter !== 'Alle' && action.layer !== layerFilter) return false;
+      
+      // 2. Item Filter
+      if (itemFilter !== 'Alle' && action.knowledgeItemName !== itemFilter) return false;
+
+      // 3. Timeframe Filter
+      if (timeframe === 'Alles') return true;
+      
+      const actionDate = parseISO(action.scheduledStartDate);
+      const today = new Date();
+      
+      if (timeframe === 'Vandaag') {
+        return isToday(actionDate);
+      }
+      
+      if (timeframe === '10 Dagen') {
+        return isWithinInterval(actionDate, { start: today, end: addDays(today, 10) });
+      }
+
+      if (timeframe === 'Maand') {
+        return isWithinInterval(actionDate, { start: today, end: addDays(today, 30) });
+      }
+
+      return true;
+    });
+  }, [allActions, timeframe, layerFilter, itemFilter]);
+
+  const totalCost = filteredActions.reduce((acc, curr) => acc + curr.cost, 0);
+  const totalDays = filteredActions.reduce((acc, curr) => acc + curr.durationDays, 0);
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-between items-center">
         <h2>Dashboard Overzicht</h2>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      <DashboardFilters 
+        timeframe={timeframe}
+        setTimeframe={setTimeframe}
+        layerFilter={layerFilter}
+        setLayerFilter={setLayerFilter}
+        itemFilter={itemFilter}
+        setItemFilter={setItemFilter}
+      />
+
+      {/* Top stats for currently filtered view */}
+      <div className="flex gap-4">
         <div className="glass-panel stat-card" style={{ flex: 1 }}>
-          <span className="label">Geplande Kennisitems</span>
-          <span className="value">{plannedItems.length}</span>
+          <span className="label">Getoonde Acties</span>
+          <span className="value">{filteredActions.length}</span>
         </div>
         <div className="glass-panel stat-card" style={{ flex: 1 }}>
-          <span className="label">Totaal Communicatie Acties</span>
-          <span className="value">{calculatedActions.length}</span>
-        </div>
-        <div className="glass-panel stat-card" style={{ flex: 1 }}>
-          <span className="label">Totale Kosten (geschat)</span>
+          <span className="label">Totale Kosten (gefilterd)</span>
           <span className="value">
-            {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(totalCost)}
+            {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(totalCost)}
           </span>
         </div>
         <div className="glass-panel stat-card" style={{ flex: 1 }}>
@@ -37,44 +84,17 @@ export default function DashboardView() {
         </div>
       </div>
 
-      <div className="glass-panel">
-        <h3 className="mb-4">Aankomende Communicatie Acties</h3>
-        {calculatedActions.length === 0 ? (
-          <p className="text-secondary">Er zijn nog geen acties berekend. Ga naar 'Planning Maken' om te beginnen.</p>
-        ) : (
-          <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Datum Uitvoering</th>
-                  <th>Laag</th>
-                  <th>Kennisitem</th>
-                  <th>Actie</th>
-                  <th>Duur (dagen)</th>
-                  <th>Kosten</th>
-                </tr>
-              </thead>
-              <tbody>
-                {calculatedActions.map(action => (
-                  <tr key={action.id}>
-                    <td>
-                      <strong>{format(parseISO(action.scheduledStartDate), 'dd-MM-yyyy')}</strong>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${action.layer.toLowerCase()}`}>
-                        {action.layer}
-                      </span>
-                    </td>
-                    <td>{action.knowledgeItemName}</td>
-                    <td>{action.actionName}</td>
-                    <td>{action.durationDays} d.</td>
-                    <td>{new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(action.cost)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Main content grid */}
+      <div className="flex gap-6 mt-2">
+        {/* Left column: Timeline */}
+        <div style={{ flex: 1 }}>
+          <TimelineView actions={filteredActions} />
+        </div>
+        
+        {/* Right column: Chart */}
+        <div style={{ flex: 1.5 }}>
+          <WorkloadChart actions={filteredActions} />
+        </div>
       </div>
     </div>
   );
