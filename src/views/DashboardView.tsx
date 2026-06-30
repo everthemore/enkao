@@ -4,7 +4,7 @@ import DashboardFilters from '../components/DashboardFilters';
 import type { TimeframeFilter } from '../components/DashboardFilters';
 import TimelineView from '../components/TimelineView';
 import WorkloadChart from '../components/WorkloadChart';
-import { isToday, isWithinInterval, addDays, parseISO } from 'date-fns';
+import { isToday, isWithinInterval, addDays, parseISO, startOfDay, endOfDay, isAfter, isBefore } from 'date-fns';
 import type { EducationLayer } from '../types';
 
 export default function DashboardView() {
@@ -16,6 +16,8 @@ export default function DashboardView() {
   const [timeframe, setTimeframe] = useState<TimeframeFilter>('Alles');
   const [layerFilter, setLayerFilter] = useState<EducationLayer | 'Alle'>('Alle');
   const [itemFilter, setItemFilter] = useState<string>('Alle');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
 
   // Derived filtered actions
   const filteredActions = useMemo(() => {
@@ -30,23 +32,38 @@ export default function DashboardView() {
       if (timeframe === 'Alles') return true;
       
       const actionDate = parseISO(action.scheduledStartDate);
-      const today = new Date();
+      const today = startOfDay(new Date());
       
       if (timeframe === 'Vandaag') {
         return isToday(actionDate);
       }
       
       if (timeframe === '10 Dagen') {
-        return isWithinInterval(actionDate, { start: today, end: addDays(today, 10) });
+        return isWithinInterval(actionDate, { start: today, end: endOfDay(addDays(today, 10)) });
       }
 
       if (timeframe === 'Maand') {
-        return isWithinInterval(actionDate, { start: today, end: addDays(today, 30) });
+        return isWithinInterval(actionDate, { start: today, end: endOfDay(addDays(today, 30)) });
+      }
+
+      if (timeframe === 'Aangepaste Periode') {
+        if (!customStartDate && !customEndDate) return true; // Show all if nothing entered yet
+        
+        let inRange = true;
+        if (customStartDate) {
+          const start = startOfDay(parseISO(customStartDate));
+          if (isBefore(actionDate, start)) inRange = false;
+        }
+        if (customEndDate) {
+          const end = endOfDay(parseISO(customEndDate));
+          if (isAfter(actionDate, end)) inRange = false;
+        }
+        return inRange;
       }
 
       return true;
     });
-  }, [allActions, timeframe, layerFilter, itemFilter]);
+  }, [allActions, timeframe, layerFilter, itemFilter, customStartDate, customEndDate]);
 
   const totalCost = filteredActions.reduce((acc, curr) => acc + curr.cost, 0);
   const totalDays = filteredActions.reduce((acc, curr) => acc + curr.durationDays, 0);
@@ -64,6 +81,10 @@ export default function DashboardView() {
         setLayerFilter={setLayerFilter}
         itemFilter={itemFilter}
         setItemFilter={setItemFilter}
+        customStartDate={customStartDate}
+        setCustomStartDate={setCustomStartDate}
+        customEndDate={customEndDate}
+        setCustomEndDate={setCustomEndDate}
       />
 
       {/* Top stats for currently filtered view */}
