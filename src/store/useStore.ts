@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { ActionTemplate, AppEvent, PlannedKnowledgeItem, CalculatedAction } from '../types';
+import type { ActionTemplate, AppEvent, PlannedKnowledgeItem, CalculatedAction, ActionOverride } from '../types';
 import { generateMockActionTemplates } from '../utils/dataGenerator';
 import { calculateValidDate } from '../utils/dateLogic';
 
@@ -13,6 +13,7 @@ interface AppState {
   removeEvent: (id: string) => void;
   addPlannedItem: (item: Omit<PlannedKnowledgeItem, 'id'>) => void;
   removePlannedItem: (id: string) => void;
+  updatePlannedItemActionOverride: (plannedItemId: string, templateId: string, override: ActionOverride) => void;
   updateActionTemplate: (id: string, updates: Partial<ActionTemplate>) => void;
   addActionTemplate: (template: Omit<ActionTemplate, 'id'>) => void;
   removeActionTemplate: (id: string) => void;
@@ -37,6 +38,23 @@ export const useStore = create<AppState>()(
       removePlannedItem: (id) => set((state) => ({
         plannedItems: state.plannedItems.filter(i => i.id !== id)
       })),
+      updatePlannedItemActionOverride: (plannedItemId, templateId, override) => set((state) => ({
+        plannedItems: state.plannedItems.map(item => {
+          if (item.id === plannedItemId) {
+            return {
+              ...item,
+              actionOverrides: {
+                ...(item.actionOverrides || {}),
+                [templateId]: {
+                  ...(item.actionOverrides?.[templateId] || {}),
+                  ...override
+                }
+              }
+            };
+          }
+          return item;
+        })
+      })),
       updateActionTemplate: (id, updates) => set((state) => ({
         actionTemplates: state.actionTemplates.map(t => 
           t.id === id ? { ...t, ...updates } : t
@@ -58,21 +76,29 @@ export const useStore = create<AppState>()(
           );
 
           templates.forEach(template => {
-            const scheduledStartDate = calculateValidDate(plannedItem.startDate, template.dayOffset, events, template.layer);
-            const scheduledEndDate = calculateValidDate(scheduledStartDate, template.durationDays - 1, events, template.layer);
+            const override = plannedItem.actionOverrides?.[template.id];
+            
+            const actionName = override?.actionName ?? template.actionName;
+            const dayOffset = override?.dayOffset ?? template.dayOffset;
+            const durationDays = override?.durationDays ?? template.durationDays;
+            const cost = override?.cost ?? template.cost;
+
+            const scheduledStartDate = calculateValidDate(plannedItem.startDate, dayOffset, events, template.layer);
+            const scheduledEndDate = calculateValidDate(scheduledStartDate, durationDays - 1, events, template.layer);
 
             calculatedActions.push({
-              id: uuidv4(),
+              id: uuidv4(), // Generate a unique ID per calculation (acceptable for derived state)
               plannedItemId: plannedItem.id,
               templateId: template.id,
-              actionName: template.actionName,
+              actionName,
               layer: template.layer,
               knowledgeItemName: template.knowledgeItemName,
               originalStartDate: plannedItem.startDate,
               scheduledStartDate,
               scheduledEndDate,
-              durationDays: template.durationDays,
-              cost: template.cost
+              dayOffset,
+              durationDays,
+              cost
             });
           });
         });

@@ -19,12 +19,20 @@ export interface AppEvent {
   layers: EducationLayer[];
 }
 
+export interface ActionOverride {
+  actionName?: string;
+  dayOffset?: number;
+  durationDays?: number;
+  cost?: number;
+}
+
 export interface PlannedKnowledgeItem {
   id: string;
   layer: EducationLayer;
   knowledgeItemName: string;
   customName?: string; // Optionele naam/notitie (bijv. specifieke leidraad naam)
   startDate: string; // YYYY-MM-DD
+  actionOverrides?: Record<string, ActionOverride>; // Key is the templateId
 }
 
 export interface CalculatedAction {
@@ -37,6 +45,7 @@ export interface CalculatedAction {
   originalStartDate: string; // Start date of the knowledge item
   scheduledStartDate: string; // Start date of this specific action (accounting for offset, weekends, events)
   scheduledEndDate: string; // End date of this specific action (based on duration, weekends, events)
+  dayOffset: number; // The offset used for this calculation
   durationDays: number;
   cost: number;
 }
