@@ -14,12 +14,14 @@ export interface AppEvent {
   id: string;
   date: string; // YYYY-MM-DD
   description: string;
+  layers: EducationLayer[];
 }
 
 export interface PlannedKnowledgeItem {
   id: string;
   layer: EducationLayer;
   knowledgeItemName: string;
+  customName?: string; // Optionele naam/notitie (bijv. specifieke leidraad naam)
   startDate: string; // YYYY-MM-DD
 }
 

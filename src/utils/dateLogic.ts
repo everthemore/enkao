@@ -1,5 +1,5 @@
 import { addDays, isWeekend, format, parseISO } from 'date-fns';
-import type { AppEvent } from '../types';
+import type { AppEvent, EducationLayer } from '../types';
 
 /**
  * Calculates a valid date by skipping weekends and defined events.
@@ -7,12 +7,14 @@ import type { AppEvent } from '../types';
  * @param baseDate The starting date
  * @param offsetDays How many days to add
  * @param events List of events to skip
+ * @param targetLayer The education layer to check against event applicability
  * @returns The calculated valid date in YYYY-MM-DD format
  */
 export const calculateValidDate = (
   baseDate: Date | string,
   offsetDays: number,
-  events: AppEvent[]
+  events: AppEvent[],
+  targetLayer: EducationLayer
 ): string => {
   let currentDate = typeof baseDate === 'string' ? parseISO(baseDate) : baseDate;
   
@@ -24,7 +26,14 @@ export const calculateValidDate = (
   while (!isValid) {
     const isWknd = isWeekend(currentDate);
     const dateStr = format(currentDate, 'yyyy-MM-dd');
-    const hasEvent = events.some(e => e.date === dateStr);
+    
+    // Check if there is an event on this day that applies to the target layer
+    const hasEvent = events.some(e => {
+      if (e.date !== dateStr) return false;
+      // If layers array is empty, we assume it applies to all. Otherwise check includes.
+      if (!e.layers || e.layers.length === 0) return true;
+      return e.layers.includes(targetLayer);
+    });
 
     if (isWknd || hasEvent) {
       currentDate = addDays(currentDate, 1);

@@ -58,8 +58,8 @@ export const useStore = create<AppState>()(
           );
 
           templates.forEach(template => {
-            const scheduledStartDate = calculateValidDate(plannedItem.startDate, template.dayOffset, events);
-            const scheduledEndDate = calculateValidDate(scheduledStartDate, template.durationDays - 1, events);
+            const scheduledStartDate = calculateValidDate(plannedItem.startDate, template.dayOffset, events, template.layer);
+            const scheduledEndDate = calculateValidDate(scheduledStartDate, template.durationDays - 1, events, template.layer);
 
             calculatedActions.push({
               id: uuidv4(),
