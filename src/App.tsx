@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { LayoutDashboard, CalendarPlus, CalendarDays } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { LayoutDashboard, CalendarPlus, CalendarDays, Moon, Sun } from 'lucide-react';
 import DashboardView from './views/DashboardView';
 import PlanningView from './views/PlanningView';
 import EventsView from './views/EventsView';
@@ -8,6 +8,15 @@ type Tab = 'dashboard' | 'planning' | 'events';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [isLightMode, setIsLightMode] = useState(true); // Light mode by default as requested
+
+  useEffect(() => {
+    if (isLightMode) {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+  }, [isLightMode]);
 
   return (
     <div className="app-container">
@@ -45,6 +54,20 @@ function App() {
           <CalendarDays size={18} />
           Evenementen
         </button>
+
+        <div style={{ marginTop: 'auto' }}>
+          <button 
+            className="btn"
+            style={{ width: '100%', justifyContent: 'center' }}
+            onClick={() => setIsLightMode(!isLightMode)}
+          >
+            {isLightMode ? (
+              <><Moon size={18} /> Donkere Modus</>
+            ) : (
+              <><Sun size={18} /> Lichte Modus</>
+            )}
+          </button>
+        </div>
       </aside>
 
       <main className="main-content">

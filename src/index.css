@@ -15,6 +15,17 @@
   --glass-border: rgba(255, 255, 255, 0.1);
 }
 
+:root.light-mode {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.1);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
