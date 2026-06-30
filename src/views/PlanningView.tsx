@@ -9,7 +9,8 @@ export default function PlanningView() {
   const plannedItems = useStore(state => state.plannedItems);
   const addPlannedItem = useStore(state => state.addPlannedItem);
   const removePlannedItem = useStore(state => state.removePlannedItem);
-  const calculatedActions = useStore(state => state.getCalculatedActions());
+  const getCalculatedActions = useStore(state => state.getCalculatedActions);
+  const calculatedActions = getCalculatedActions();
 
   const knowledgeItems = getKnowledgeItemNames();
   const layers = getLayers();
