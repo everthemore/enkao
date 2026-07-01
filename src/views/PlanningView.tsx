@@ -6,7 +6,8 @@ import { format, parseISO } from 'date-fns';
 import type { EducationLayer, CalculatedAction } from '../types';
 
 function CalculatedActionRow({ action, plannedItemId }: { action: CalculatedAction, plannedItemId: string }) {
-  const updateOverride = useStore(state => state.updatePlannedItemActionOverride);
+  const updatePlannedItemAction = useStore(state => state.updatePlannedItemAction);
+  const removePlannedItemAction = useStore(state => state.removePlannedItemAction);
 
   const [name, setName] = useState(action.actionName);
   const [offset, setOffset] = useState(action.dayOffset);
@@ -28,13 +29,16 @@ function CalculatedActionRow({ action, plannedItemId }: { action: CalculatedActi
     cost !== action.cost;
 
   const handleSave = () => {
-    // Make sure we pass the templateId, not the action.id (which is unique per calculation)
-    updateOverride(plannedItemId, action.templateId, {
+    updatePlannedItemAction(plannedItemId, action.plannedActionId, {
       actionName: name,
       dayOffset: offset,
       durationDays: duration,
       cost: cost
     });
+  };
+
+  const handleDelete = () => {
+    removePlannedItemAction(plannedItemId, action.plannedActionId);
   };
 
   return (
@@ -43,9 +47,14 @@ function CalculatedActionRow({ action, plannedItemId }: { action: CalculatedActi
         <input className="input" value={name} onChange={e => setName(e.target.value)} style={{ padding: '0.25rem', fontSize: '0.875rem' }} />
       </td>
       <td style={{ padding: '0.25rem 0.5rem' }}>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           <input className="input" type="number" value={offset} onChange={e => setOffset(Number(e.target.value))} style={{ padding: '0.25rem', width: '60px', fontSize: '0.875rem' }} />
           <span className="text-secondary" style={{ fontSize: '0.75rem' }}>({format(parseISO(action.scheduledStartDate), 'dd-MM-yyyy')})</span>
+          {action.shiftedDays > 0 && (
+            <span className="badge badge-ho" style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', backgroundColor: 'var(--primary)', color: '#fff' }}>
+              +{action.shiftedDays}d verschoven
+            </span>
+          )}
         </div>
       </td>
       <td style={{ padding: '0.25rem 0.5rem' }}>
@@ -54,12 +63,17 @@ function CalculatedActionRow({ action, plannedItemId }: { action: CalculatedActi
       <td style={{ padding: '0.25rem 0.5rem' }}>
         <input className="input" type="number" value={cost} onChange={e => setCost(Number(e.target.value))} style={{ padding: '0.25rem', width: '80px', fontSize: '0.875rem' }} />
       </td>
-      <td style={{ padding: '0.25rem 0.5rem', width: '40px' }}>
-        {hasChanges && (
-          <button onClick={handleSave} className="btn btn-primary" style={{ padding: '0.25rem 0.5rem' }}>
-            <Save size={14} />
+      <td style={{ padding: '0.25rem 0.5rem', width: '70px' }}>
+        <div className="flex gap-1">
+          {hasChanges && (
+            <button onClick={handleSave} className="btn btn-primary" style={{ padding: '0.25rem 0.4rem' }} title="Opslaan">
+              <Save size={14} />
+            </button>
+          )}
+          <button onClick={handleDelete} className="btn btn-danger" style={{ padding: '0.25rem 0.4rem' }} title="Verwijder actie van dit item">
+            <Trash2 size={14} />
           </button>
-        )}
+        </div>
       </td>
     </tr>
   );
@@ -69,6 +83,8 @@ export default function PlanningView() {
   const plannedItems = useStore(state => state.plannedItems);
   const addPlannedItem = useStore(state => state.addPlannedItem);
   const removePlannedItem = useStore(state => state.removePlannedItem);
+  const addPlannedItemAction = useStore(state => state.addPlannedItemAction);
+  
   const getCalculatedActions = useStore(state => state.getCalculatedActions);
   const calculatedActions = getCalculatedActions();
 
@@ -102,6 +118,15 @@ export default function PlanningView() {
     setExpandedItemId(prev => prev === id ? null : id);
   };
 
+  const handleAddAction = (itemId: string) => {
+    addPlannedItemAction(itemId, {
+      actionName: 'Nieuwe Communicatie Actie',
+      dayOffset: 0,
+      durationDays: 1,
+      cost: 100
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex justify-between items-center">
@@ -111,8 +136,8 @@ export default function PlanningView() {
       <div className="glass-panel">
         <h3 className="mb-4">Nieuw Kennisitem Plannen</h3>
         <form onSubmit={handleAdd} className="flex flex-col gap-4">
-          <div className="flex gap-4 items-end">
-            <div className="flex-col gap-2" style={{ flex: 1 }}>
+          <div className="flex gap-4 items-end flex-wrap">
+            <div className="flex-col gap-2" style={{ flex: 1, minWidth: '150px' }}>
               <label className="text-secondary" style={{ fontSize: '0.875rem' }}>Onderwijslaag</label>
               <select 
                 className="select mt-2" 
@@ -125,7 +150,7 @@ export default function PlanningView() {
               </select>
             </div>
             
-            <div className="flex-col gap-2" style={{ flex: 1.5 }}>
+            <div className="flex-col gap-2" style={{ flex: 1.5, minWidth: '200px' }}>
               <label className="text-secondary" style={{ fontSize: '0.875rem' }}>Kennisitem</label>
               <select 
                 className="select mt-2" 
@@ -138,7 +163,7 @@ export default function PlanningView() {
               </select>
             </div>
 
-            <div className="flex-col gap-2" style={{ flex: 1.5 }}>
+            <div className="flex-col gap-2" style={{ flex: 1.5, minWidth: '200px' }}>
               <label className="text-secondary" style={{ fontSize: '0.875rem' }}>Specifieke Notitie/Naam (optioneel)</label>
               <input 
                 type="text" 
@@ -150,8 +175,8 @@ export default function PlanningView() {
             </div>
           </div>
           
-          <div className="flex gap-4 items-end">
-            <div className="flex-col gap-2" style={{ flex: 1 }}>
+          <div className="flex gap-4 items-end flex-wrap">
+            <div className="flex-col gap-2" style={{ flex: 1, minWidth: '200px' }}>
               <label className="text-secondary" style={{ fontSize: '0.875rem' }}>Startdatum</label>
               <input 
                 type="date" 
@@ -226,9 +251,17 @@ export default function PlanningView() {
                     {isExpanded && (
                       <tr style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>
                         <td colSpan={5} style={{ padding: '1.5rem' }}>
-                          <h4 className="mb-3 text-secondary" style={{ fontSize: '0.875rem', textTransform: 'uppercase' }}>Acties Bewerken voor dit item</h4>
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="text-secondary" style={{ fontSize: '0.875rem', textTransform: 'uppercase', margin: 0 }}>
+                              Acties voor dit specifiek gepland item
+                            </h4>
+                            <button onClick={() => handleAddAction(item.id)} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>
+                              <Plus size={14} /> Actie Toevoegen
+                            </button>
+                          </div>
+                          
                           {itemActions.length === 0 ? (
-                            <p className="text-secondary" style={{ fontSize: '0.875rem' }}>Geen acties gevonden voor dit item. Controleer de sjablonen.</p>
+                            <p className="text-secondary" style={{ fontSize: '0.875rem' }}>Geen acties gevonden voor dit item. Voeg er hierboven één toe.</p>
                           ) : (
                             <table className="data-table" style={{ marginTop: 0, backgroundColor: 'var(--surface)' }}>
                               <thead>
@@ -237,7 +270,7 @@ export default function PlanningView() {
                                   <th style={{ fontSize: '0.75rem', padding: '0.5rem' }}>Start na (dagen) / Verwachte Datum</th>
                                   <th style={{ fontSize: '0.75rem', padding: '0.5rem' }}>Duur</th>
                                   <th style={{ fontSize: '0.75rem', padding: '0.5rem' }}>Kosten</th>
-                                  <th style={{ fontSize: '0.75rem', padding: '0.5rem', width: '40px' }}></th>
+                                  <th style={{ fontSize: '0.75rem', padding: '0.5rem', width: '70px' }}></th>
                                 </tr>
                               </thead>
                               <tbody>

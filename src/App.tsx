@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, CalendarPlus, CalendarDays, Settings, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, CalendarPlus, CalendarDays, Settings, Moon, Sun, Calendar } from 'lucide-react';
 import DashboardView from './views/DashboardView';
+import CalendarView from './views/CalendarView';
 import PlanningView from './views/PlanningView';
 import EventsView from './views/EventsView';
 import TemplatesView from './views/TemplatesView';
 
-type Tab = 'dashboard' | 'planning' | 'events' | 'templates';
+type Tab = 'dashboard' | 'calendar' | 'planning' | 'events' | 'templates';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -36,6 +37,15 @@ function App() {
         >
           <LayoutDashboard size={18} />
           Dashboard
+        </button>
+
+        <button 
+          className={`btn ${activeTab === 'calendar' ? 'btn-primary' : ''}`}
+          style={{ justifyContent: 'flex-start' }}
+          onClick={() => setActiveTab('calendar')}
+        >
+          <Calendar size={18} />
+          Kalender
         </button>
 
         <button 
@@ -83,6 +93,7 @@ function App() {
       <main className="main-content">
         <div className="animate-fade-in">
           {activeTab === 'dashboard' && <DashboardView />}
+          {activeTab === 'calendar' && <CalendarView />}
           {activeTab === 'planning' && <PlanningView />}
           {activeTab === 'events' && <EventsView />}
           {activeTab === 'templates' && <TemplatesView />}
