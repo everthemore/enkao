@@ -15,7 +15,7 @@ import {
   startOfDay
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, X, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-react';
 import type { EducationLayer } from '../types';
 import { getLayers } from '../utils/dataGenerator';
 
@@ -186,12 +186,28 @@ export default function CalendarView() {
               {dayEvents.map(ev => (
                 <div 
                   key={ev.id} 
-                  className="p-2 rounded text-xs border border-dashed border-secondary flex items-center gap-1.5"
-                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)', color: 'var(--text-secondary)' }}
+                  className="p-2 rounded text-xs flex flex-col gap-1 border border-[var(--border)] transition-all hover:scale-[1.02]"
+                  style={{ 
+                    backgroundColor: 'rgba(156, 39, 176, 0.15)',
+                    borderLeft: `3px solid #ab47bc`
+                  }}
                   title={ev.description}
                 >
-                  <CalendarDays size={12} className="shrink-0" />
-                  <span className="truncate font-medium">{ev.description}</span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="badge" style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', backgroundColor: '#ab47bc', color: '#fff' }}>
+                      Evenement
+                    </span>
+                    <div className="flex gap-0.5">
+                      {(ev.layers || []).length === availableLayers.length ? (
+                        <span className="badge" style={{ fontSize: '0.6rem', padding: '0.05rem 0.2rem' }}>Alle</span>
+                      ) : (
+                        (ev.layers || []).map(l => <span key={l} className={`badge badge-${l.toLowerCase()}`} style={{ fontSize: '0.6rem', padding: '0.05rem 0.2rem' }}>{l}</span>)
+                      )}
+                    </div>
+                  </div>
+                  <span className="font-semibold text-white truncate">
+                    {ev.description}
+                  </span>
                 </div>
               ))}
 
@@ -256,83 +272,74 @@ export default function CalendarView() {
             </div>
 
             {/* Modal Content */}
-            <div className="flex flex-col gap-6 overflow-y-auto pr-1">
-              {/* Events section */}
-              <div>
-                <h4 className="text-sm uppercase text-secondary font-semibold mb-2 flex items-center gap-2">
-                  <CalendarDays size={16} /> Feestdagen & Evenementen
-                </h4>
-                {selectedDayItems.dayEvents.length === 0 ? (
-                  <p className="text-sm text-secondary italic">Geen evenementen op deze dag.</p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {selectedDayItems.dayEvents.map(ev => (
-                      <div key={ev.id} className="p-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex justify-between items-center">
-                        <span className="font-medium">{ev.description}</span>
-                        <div className="flex gap-1">
-                          {(ev.layers || []).length === availableLayers.length ? (
-                            <span className="badge">Alle Lagen</span>
+            <div className="flex flex-col gap-4 overflow-y-auto pr-1">
+              {selectedDayItems.dayEvents.length === 0 && selectedDayItems.dayActions.length === 0 ? (
+                <p className="text-sm text-secondary italic">Geen geplande acties of evenementen op deze dag.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {/* Combined list of Events and Actions directly in calendar */}
+                  {selectedDayItems.dayEvents.map(ev => (
+                    <div key={ev.id} className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-2" style={{ borderLeft: '4px solid #ab47bc' }}>
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="badge" style={{ backgroundColor: '#ab47bc', color: '#fff' }}>Evenement / Feestdag</span>
+                            {(ev.layers || []).length === availableLayers.length ? (
+                              <span className="badge">Alle Lagen</span>
+                            ) : (
+                              ev.layers.map(l => <span key={l} className={`badge badge-${l.toLowerCase()}`}>{l}</span>)
+                            )}
+                          </div>
+                          <span className="font-bold text-lg text-white">{ev.description}</span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-secondary mt-1 pt-2 border-t border-[var(--border)] flex gap-4">
+                        <span>Periode: <strong className="text-white">{format(parseISO(ev.startDate || ev.date!), 'dd-MM-yyyy')} {ev.endDate && ev.endDate !== ev.startDate ? `t/m ${format(parseISO(ev.endDate), 'dd-MM-yyyy')}` : ''}</strong></span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {selectedDayItems.dayActions.map(action => (
+                    <div key={action.id} className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-2" style={{ borderLeft: '4px solid var(--primary)' }}>
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`badge badge-${action.layer.toLowerCase()}`}>{action.layer}</span>
+                            <span className="font-bold text-base">{action.knowledgeItemName}</span>
+                          </div>
+                          <span className="text-primary font-medium">{action.actionName}</span>
+                        </div>
+                        <span className="font-bold text-lg">
+                          {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(action.cost)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs text-secondary mt-2 pt-2 border-t border-[var(--border)]">
+                        <div>
+                          <span>Startdatum: </span>
+                          <strong className="text-white">{format(parseISO(action.scheduledStartDate), 'dd-MM-yyyy')}</strong>
+                        </div>
+                        <div>
+                          <span>Duur: </span>
+                          <strong className="text-white">{action.durationDays} dag(en)</strong>
+                        </div>
+                        <div>
+                          <span>Theoretische start: </span>
+                          <span>{format(addDays(parseISO(action.originalStartDate), action.dayOffset), 'dd-MM-yyyy')}</span>
+                        </div>
+                        <div>
+                          <span>Status: </span>
+                          {action.shiftedDays > 0 ? (
+                            <span className="text-[#ff9800] font-bold">+{action.shiftedDays} dag(en) verschoven</span>
                           ) : (
-                            ev.layers.map(l => <span key={l} className={`badge badge-${l.toLowerCase()}`}>{l}</span>)
+                            <span className="text-[#4caf50]">Op schema</span>
                           )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Actions section */}
-              <div>
-                <h4 className="text-sm uppercase text-secondary font-semibold mb-2 flex items-center gap-2">
-                  <Info size={16} /> Geplande Communicatie Acties
-                </h4>
-                {selectedDayItems.dayActions.length === 0 ? (
-                  <p className="text-sm text-secondary italic">Geen communicatie acties op deze dag.</p>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {selectedDayItems.dayActions.map(action => (
-                      <div key={action.id} className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-2">
-                        <div className="flex justify-between items-start gap-2">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`badge badge-${action.layer.toLowerCase()}`}>{action.layer}</span>
-                              <span className="font-bold text-base">{action.knowledgeItemName}</span>
-                            </div>
-                            <span className="text-primary font-medium">{action.actionName}</span>
-                          </div>
-                          <span className="font-bold text-lg">
-                            {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(action.cost)}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-xs text-secondary mt-2 pt-2 border-t border-[var(--border)]">
-                          <div>
-                            <span>Startdatum: </span>
-                            <strong className="text-white">{format(parseISO(action.scheduledStartDate), 'dd-MM-yyyy')}</strong>
-                          </div>
-                          <div>
-                            <span>Duur: </span>
-                            <strong className="text-white">{action.durationDays} dag(en)</strong>
-                          </div>
-                          <div>
-                            <span>Theoretische start: </span>
-                            <span>{format(addDays(parseISO(action.originalStartDate), action.dayOffset), 'dd-MM-yyyy')}</span>
-                          </div>
-                          <div>
-                            <span>Status: </span>
-                            {action.shiftedDays > 0 ? (
-                              <span className="text-[#ff9800] font-bold">+{action.shiftedDays} dag(en) verschoven</span>
-                            ) : (
-                              <span className="text-[#4caf50]">Op schema</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
